@@ -1,0 +1,647 @@
+#include <iostream>
+#include <string>
+
+//Mendefinisikan pemain O dan X
+#define PLAYER_O "OO"
+#define PLAYER_X "XX"
+
+//Mendefinisikan tinggi dan lebar board
+#define BOARD_HEIGHT 17
+#define BOARD_WIDTH 25
+
+using namespace std;
+
+string currentPlayer = "OO";
+
+int totalPossibleMove;
+int score_O = 0;
+int score_X = 0;
+
+//Daftar langkah yang mungkin dari pemain di koordinat board
+struct koordinat {
+	int x; 
+	int y;
+	bool canPlace;
+} KOORDINAT[8][8];
+
+//Mengecek game berakhir atau tidak
+bool isOver();
+
+//Mendapatkan daftar langkah yang bisa
+void generatePossibleMove();
+
+//Mereset possible move setelah giliran pemain
+void resetPossibleMove();
+
+//Menampilkan possible move pemain
+void printPossibleMove();
+
+//Merubah pion pemain lain dlm 1 garis
+void changeEnemyPion(int, int);
+
+//Menaruh pion di papan
+void placePion(int);
+
+//Mendapatkan siapa pemenangnya, yang paling banyak pionnya
+char getTheWinner();
+
+//Mengganti giliran pemain
+void changePlayerTurn();
+
+//Menghitung dan menampilkan skor
+void generateScore();
+
+//Menampilkan boardnya
+void printBoard();
+
+char board[17][26] = {
+	"[==^==^==^==^==^==^==^==]",
+	"|  |  |  |  |  |  |  |  |",
+	"<==#==#==#==#==#==#==#==>",
+	"|  |  |  |  |  |  |  |  |",
+	"<==#==#==#==#==#==#==#==>",
+	"|  |  |  |  |  |  |  |  |",
+	"<==#==#==#==#==#==#==#==>",
+	"|  |  |  |XX|OO|  |  |  |",
+	"<==#==#==#==#==#==#==#==>",
+	"|  |  |  |OO|XX|  |  |  |",
+	"<==#==#==#==#==#==#==#==>",
+	"|  |  |  |  |  |  |  |  |",
+	"<==#==#==#==#==#==#==#==>",
+	"|  |  |  |  |  |  |  |  |",
+	"<==#==#==#==#==#==#==#==>",
+	"|  |  |  |  |  |  |  |  |",
+	"(==%==%==%==%==%==%==%==)"
+};
+
+main() {
+	int pil;
+	
+	while(!isOver()) {
+		system("cls");
+		
+		printBoard();
+		
+		generateScore();
+		
+		cout<<"\nGILIRAN PEMAIN "<<currentPlayer<<endl;
+		
+		//Menampilkan daftar langkah
+		printPossibleMove();
+		
+		if(totalPossibleMove > 0) {
+			//Proses input langkah dari pemain
+			while(true) {
+				cout<<"\nMasukkan pilihan langkah: ";
+				cin>>pil;
+				
+				if(pil < 1 || pil > totalPossibleMove)
+					cout<<"\nPilihan tidak valid\n";
+				else
+					break;
+			}
+			
+			//Memanggil fungsi placePion untuk mengisi pion di board
+			placePion(pil);
+		}
+		else
+			cout<<"\nTidak ada langkah yang bisa dilakukan, giliran dilewati\n";
+		
+		
+		system("pause");
+		
+		//Mengganti ke giliran pemain selanjutnya
+		changePlayerTurn();
+	}
+	
+	system("cls");
+	
+	cout<<"PERMAINAN SELESAI!!\n";
+	generateScore();
+	cout<<"\nPEMENANGNYA: ";
+	if(score_X > score_O)
+		cout<<"PEMAIN X!!!\n";
+	else if(score_O > score_X)
+		cout<<"PEMAIN O!!!\n";
+	else
+		cout<<"DRAW!!!";
+}
+
+bool isOver() {
+	bool over = true;
+	
+	for(int i = 0; i < 8; i++) {
+		for(int j = 0; j < 8; j++) {
+			if(board[i*2 - 1][j*3 - 2] == ' ')
+				over = false;
+		}
+	}
+	
+	return over;
+}
+
+void generateScore() {
+	score_O = 0;
+	score_X = 0;
+	
+	for(int i = 1; i <= 8; i++) {
+		for(int j = 1; j <= 8; j++) {
+			if(board[i*2 - 1][j*3 - 2] == PLAYER_O[0])
+				score_O++;
+			else if(board[i*2 - 1][j*3 - 2] == PLAYER_X[0])
+				score_X++;
+		}
+	}
+	
+	cout<<"\nSCORE:\n";
+	cout<<"Pemain O: "<<score_O<<endl;
+	cout<<"Pemain X: "<<score_X<<endl;
+}
+
+void getPossibleMove() {
+	resetPossibleMove();
+	
+	for(int y = 1; y <= 8; y++) {
+		for(int x = 1; x <= 8; x++) {
+			//Jika ditemui pion player yg bersangkutan
+			if(board[y*2 - 1][x*3 - 2] == currentPlayer[0]) {
+				
+				//mengecek keatas
+				for(int i = y - 1; i > 0; i--) {
+					if(board[i*2 - 1][x*3 - 2] == currentPlayer[0])
+						break;
+					else if(board[i*2 - 1][x*3 - 2] == ' ' && i < y - 1) {
+						KOORDINAT[i-1][x-1].canPlace = true;
+						totalPossibleMove++;
+						break;
+					}
+					else if(board[i*2 - 1][x*3 - 2] == ' ')
+						break;
+				}
+				
+				//mengecek kebawah
+				for(int i = y + 1; i <= 8; i++) {
+					if(board[i*2 - 1][x*3 - 2] == currentPlayer[0])
+						break;
+					else if(board[i*2 - 1][x*3 - 2] == ' ' && i > y + 1) {
+						KOORDINAT[i-1][x-1].canPlace = true;
+						totalPossibleMove++;
+						break;
+					}
+					else if(board[i*2 - 1][x*3 - 2] == ' ')
+						break;
+						
+				}
+				
+				//mengecek kekiri
+				for(int i = x - 1; i > 0; i--) {
+					if(board[y*2 - 1][i*3 - 2] == currentPlayer[0])
+						break;
+					else if(board[y*2 - 1][i*3 - 2] == ' ' && i < x - 1) {
+						KOORDINAT[y-1][i-1].canPlace = true;
+						totalPossibleMove++;
+						break;
+					}
+					else if(board[y*2 - 1][i*3 - 2] == ' ')
+						break;
+				}
+				
+				//mengecek kekanan
+				for(int i = x + 1; i <= 8; i++) {
+					if(board[y*2 - 1][i*3 - 2] == currentPlayer[0])
+						break;
+					else if(board[y*2 - 1][i*3 - 2] == ' ' && i > x + 1) {
+						KOORDINAT[y-1][i-1].canPlace = true;
+						totalPossibleMove++;
+						break;
+					}
+					else if(board[y*2 - 1][i*3 - 2] == ' ')
+						break;
+				}
+				
+				//mengecek diagonal kiri atas
+				int i = x - 1;
+				int j = y - 1;
+				while(i > 0 && j > 0) {
+					if(board[j*2 - 1][i*3 - 2] == currentPlayer[0])
+						break;
+					else if(board[j*2 - 1][i*3 - 2] == ' ' && i < x - 1 && j < y - 1) {
+						KOORDINAT[j-1][i-1].canPlace = true;
+						totalPossibleMove++;
+						break;
+					}
+					else if(board[j*2 - 1][i*3 - 2] == ' ')
+						break;
+					
+					i--;
+					j--;
+				}
+				
+				//mengecek diagonal kanan atas
+				i = x + 1;
+				j = y - 1;
+				while(i <= 8 && j > 0) {
+					if(board[j*2 - 1][i*3 - 2] == currentPlayer[0])
+						break;
+					else if(board[j*2 - 1][i*3 - 2] == ' ' && i > x + 1 && j < y - 1) {
+						KOORDINAT[j-1][i-1].canPlace = true;
+						totalPossibleMove++;
+						break;
+					}
+					else if(board[j*2 - 1][i*3 - 2] == ' ')
+						break;
+					
+					i++;
+					j--;
+				}
+				
+				//mengecek diagonal kiri bawah
+				i = x - 1;
+				j = y + 1;
+				while(i > 0 && j <= 8) {
+					if(board[j*2 - 1][i*3 - 2] == currentPlayer[0])
+						break;
+					else if(board[j*2 - 1][i*3 - 2] == ' ' && i < x - 1 && j > y + 1) {
+						KOORDINAT[j-1][i-1].canPlace = true;
+						totalPossibleMove++;
+						break;
+					}
+					else if(board[j*2 - 1][i*3 - 2] == ' ')
+						break;
+					
+					i--;
+					j++;
+				}
+				
+				//mengecek diagonal kanan bawah
+				i = x + 1;
+				j = y + 1;
+				while(i <= 8 && j <= 8) {
+					if(board[j*2 - 1][i*3 - 2] == currentPlayer[0])
+						break;
+					else if(board[j*2 - 1][i*3 - 2] == ' ' && i > x + 1 && j > y + 1) {
+						KOORDINAT[j-1][i-1].canPlace = true;
+						totalPossibleMove++;
+						break;
+					}
+					else if(board[j*2 - 1][i*3 - 2] == ' ')
+						break;
+					
+					i++;
+					j++;
+				}
+			}
+		}
+	}
+}
+
+void printPossibleMove() {
+	int n = 0;
+	
+	getPossibleMove();
+	cout<<"\nDaftar langkah: \n";
+	for(int i = 0; i < 8; i++)
+		for(int j = 0; j < 8; j++) {
+			if(KOORDINAT[i][j].canPlace) {
+				cout<<++n<<". Y = "<<i + 1<<" dan X = "<<j + 1<<endl;
+			}
+		}
+}
+
+void resetPossibleMove() {
+	totalPossibleMove = 0;
+	
+	for(int i = 0; i < 8; i++)
+		for(int j = 0; j < 8; j++)
+			KOORDINAT[i][j].canPlace = false;
+}
+
+void changePlayerTurn() {
+	if(currentPlayer.compare("XX") == 0)
+		currentPlayer = "OO";
+	else
+		currentPlayer = "XX";
+}
+
+void placePion(int pil) {	
+	int x, y;
+	int n = 0;
+	
+	for(int i = 0; i < 8; i++) {
+		for(int j = 0; j < 8; j++) {
+			if(KOORDINAT[i][j].canPlace)
+				n++;
+				
+			if(n == pil) {
+				y = i + 1;
+				x = j + 1;
+				
+				break;
+			}
+		}
+		
+		if(n == pil) break;
+	}
+	
+	board[y*2-1][x*3-2] = currentPlayer[0];
+	board[y*2-1][x*3-1] = currentPlayer[1];
+	
+	//Setelah menaruh pion, memanggil fungsi untuk merubah pion pemain dari horizontal, vertikal dan diagonal
+	changeEnemyPion(x, y);
+}
+
+void changeEnemyPion(int x, int y) {
+	int n = 0;
+	char c = currentPlayer[0];
+					
+					//mengecek keatas
+					bool status = false;
+					for(int i = y - 1; i > 0; i--) {
+						if(board[i*2 - 1][x*3 - 2] == ' ')
+							break;
+						else if(board[i*2 - 1][x*3 - 2] == c)
+							if(i < y - 1) {
+								status = true;
+								break;
+							}
+							else if(i == y)
+								break;
+					}
+					if(status) {
+						for(int i = y - 1; i > 0; i--) {
+							if(board[i*2 - 1][x*3 - 2] != c) {
+								board[i*2 - 1][x*3 - 2] = c;
+								board[i*2 - 1][x*3 - 1] = c;
+								n++;
+							}
+							else
+								break;
+						}
+					}
+								
+					//mengecek kebawah
+					status = false;
+					for(int i = y + 1; i <= 8; i++) {
+						if(board[i*2 - 1][x*3 - 2] == ' ')
+							break;
+						else if(board[i*2 - 1][x*3 - 2] == c)
+							if(i > y + 1) {
+								status = true;
+								break;
+							}
+							else if(i == y)
+								break;
+					}
+					if(status) {
+						for(int i = y + 1; i <= 8; i++) {
+							if(board[i*2 - 1][x*3 - 2] != c) {
+								board[i*2 - 1][x*3 - 2] = c;
+								board[i*2 - 1][x*3 - 1] = c;
+								n++;
+							}
+							else
+								break;
+						}
+					}
+								
+					//mengecek kekiri
+					status = false;
+					for(int i = x - 1; i > 0; i--) {
+						if(board[y*2 - 1][i*3 - 2] == ' ')
+							break;
+						else if(board[y*2 - 1][i*3 - 2] == c)
+							if(i < x - 1) {
+								status = true;
+								break;
+							}
+							else if(i == y)
+								break;
+					}
+					if(status) {
+						for(int i = x - 1; i > 0; i--) {
+							if(board[y*2 - 1][i*3 - 2] != c) {
+								board[y*2 - 1][i*3 - 2] = c;
+								board[y*2 - 1][i*3 - 1] = c;
+								n++;
+							}
+							else
+								break;
+						}
+					}
+				
+						
+					//mengecek kekanan
+					status = false;
+					for(int i = x + 1; i <= 8; i++) {
+						if(board[y*2 - 1][i*3 - 2] == ' ')
+							break;
+						else if(board[y*2 - 1][i*3 - 2] == c)
+							if(i > x + 1) {
+								status = true;
+								break;
+							}
+							else if(i == y)
+								break;
+					}
+					if(status) {
+						for(int i = x + 1; i <= 8; i++) {
+							if(board[y*2 - 1][i*3 - 2] != c) {
+								board[y*2 - 1][i*3 - 2] = c;
+								board[y*2 - 1][i*3 - 1] = c;
+								n++;
+							}
+							else
+								break;
+						}
+					}
+				
+							
+					//mengecek diagonal kiri atas
+					int i = x - 1;
+					int j = y - 1;
+					status = false;
+					while(i > 0 && j > 0) {
+						if(board[j*2 - 1][i*3 - 2] == ' ')
+							break;
+						else if(board[j*2 - 1][i*3 - 2] == c)
+							if(i < x - 1 && j < y - 1) {
+								status = true;
+								break;
+							}
+							else if(i == y)
+								break;
+							
+						i--;
+						j--;
+					}
+					
+					i = x - 1;
+					j = y - 1;
+					if(status) {
+						while(i > 0 && j > 0) {
+							if(board[j*2 - 1][i*3 - 2] != c) {
+								board[j*2 - 1][i*3 - 2] = c;
+								board[j*2 - 1][i*3 - 1] = c;
+								n++;
+							}
+							else
+								break;
+							
+							i--;
+							j--;
+						}
+					}
+				
+								
+					//mengecek diagonal kanan atas
+					i = x + 1;
+					j = y - 1;
+					status = false;
+					while(i <= 8 && j > 0) {
+						if(board[j*2 - 1][i*3 - 2] == ' ')
+							break;
+						else if(board[j*2 - 1][i*3 - 2] == c)
+							if(i > x + 1 && j < y - 1) {
+								status = true;
+								break;
+							}
+							else if(i == y)
+								break;
+							
+						i++;
+						j--;
+					}
+					
+					i = x + 1;
+					j = y - 1;
+					if(status) {
+						while(i <= 8 && j > 0) {
+							if(board[j*2 - 1][i*3 - 2] != c) {
+								board[j*2 - 1][i*3 - 2] = c;
+								board[j*2 - 1][i*3 - 1] = c;
+								n++;
+							}
+							else
+								break;
+							
+							i++;
+							j--;
+						}
+					}
+				
+								
+					//mengecek diagonal kiri bawah
+					i = x - 1;
+					j = y + 1;
+					status = false;
+					while(i > 0 && j <= 8) {
+						if(board[j*2 - 1][i*3 - 2] == ' ')
+							break;
+						else if(board[j*2 - 1][i*3 - 2] == c)
+							if(i < x - 1 && j > y + 1) {
+								status = true;
+								break;
+							}
+							else if(i == y)
+								break;
+									
+						i--;
+						j++;
+					}
+					
+					i = x - 1;
+					j = y + 1;
+					if(status) {
+						while(i > 0 && j <= 8) {
+							if(board[j*2 - 1][i*3 - 2] != c) {
+								board[j*2 - 1][i*3 - 2] = c;
+								board[j*2 - 1][i*3 - 1] = c;
+								n++;
+							}
+							else
+								break;
+							
+							i--;
+							j++;
+						}
+					}
+					
+								
+					//mengecek diagonal kanan bawah
+					i = x + 1;
+					j = y + 1;
+					status = false;
+					while(i <= 8 && j <= 8) {
+						if(board[j*2 - 1][i*3 - 2] == ' ')
+							break;
+						else if(board[j*2 - 1][i*3 - 2] == c)
+							if(i > x + 1 && j > y + 1) {
+								status = true;
+								break;
+							}
+							else if(i == y)
+								break;
+								
+						i++;
+						j++;
+					}
+					
+					i = x + 1;
+					j = y + 1;
+					if(status) {
+						while(i <= 8 && j <= 8) {
+							if(board[j*2 - 1][i*3 - 2] != c) {
+								board[j*2 - 1][i*3 - 2] = c;
+								board[j*2 - 1][i*3 - 1] = c;
+								n++;
+							}
+							else
+								break;
+							
+							i++;
+							j++;
+						}
+					}
+	
+	
+
+}
+
+void printBoard() {
+	cout<<"=============================\n";
+	cout<<"===== OTHELLO SEDERHANA =====\n";
+	cout<<"=============================\n\n";
+	
+	for(int i = 0; i < BOARD_HEIGHT; i++) {
+		for(int j = 0; j < BOARD_WIDTH; j++) {
+			char t = board[i][j];
+			
+			if(t == '=')
+				cout<<char(205);
+			else if(t == '|')
+				cout<<char(186);
+			else if(t == '#')
+				cout<<char(206);
+			else if(t == '^')
+				cout<<char(203);
+			else if(t == '<')
+				cout<<char(204);
+			else if(t == '>')
+				cout<<char(185);
+			else if(t == '%')
+				cout<<char(202);
+			else if(t == '[')
+				cout<<char(201);
+			else if(t == ']')
+				cout<<char(187);
+			else if(t == '(')
+				cout<<char(200);
+			else if(t == ')')
+				cout<<char(188);
+			else
+				cout<<t;
+		}
+		
+		cout<<endl;
+	}
+}
